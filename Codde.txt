@@ -1,0 +1,56 @@
+% Parameters
+L = 10; % Length of the beam (m)
+E = 210e9; % Young's Modulus (Pa)
+I = 1.33e-4; % Moment of Inertia (m^4)
+q = 1000; % Uniformly distributed load (N/m)
+n = 10; % Number of elements
+
+% Element length
+le = L/n;
+
+% Stiffness matrix assembly
+K = zeros(n+1); % Global stiffness matrix
+for i = 1:n
+    k = (E*I/le^3) * [12, 6*le, -12, 6*le;
+                      6*le, 4*le^2, -6*le, 2*le^2;
+                     -12, -6*le, 12, -6*le;
+                      6*le, 2*le^2, -6*le, 4*le^2];
+    K(i:i+3, i:i+3) = K(i:i+3, i:i+3) + k;
+end
+
+% Load vector assembly
+F = zeros(n+1, 1);
+for i = 1:n
+    f = (q*le/2) * [1; le/6; 1; -le/6];
+    F(i:i+3) = F(i:i+3) + f;
+end
+
+% Apply boundary conditions (fixed at node 1)
+K(1:2, :) = [];
+K(:, 1:2) = [];
+F(1:2) = [];
+
+% Solve the system of equations
+U = K \ F;
+
+% Post-process displacements
+U = [0; 0; U];
+
+% Calculate slopes and deflections
+slopes = U(2:2:end);
+deflections = U(1:2:end);
+
+% Analytical solution for comparison
+x = linspace(0, L, 100);
+analytical_deflection = -(q/(24*E*I)) * (x.^2) .* (x.^2 - 4*L*x + 6*L^2);
+
+% Plotting results
+figure;
+plot(linspace(0, L, n+1), deflections, '-o');
+hold on;
+plot(x, analytical_deflection, '--');
+title('Cantilever Beam Deflection');
+xlabel('Position along the beam (m)');
+ylabel('Deflection (m)');
+legend('FEA', 'Analytical');
+grid on;
